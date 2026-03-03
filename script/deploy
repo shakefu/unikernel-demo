@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Ensure ops is on PATH
+export PATH="${HOME}/.ops/bin:${PATH}"
+
+IMAGE_NAME="${IMAGE_NAME:-unikernel-demo}"
+AWS_ZONE="${AWS_ZONE:-us-east-1}"
+INSTANCE_FLAVOR="${INSTANCE_FLAVOR:-t2.micro}"
+
+echo "Launching ${INSTANCE_FLAVOR} instance from AMI: ${IMAGE_NAME}..."
+echo "  Region: ${AWS_ZONE}"
+echo ""
+
+ops instance create "${IMAGE_NAME}" \
+    -t aws \
+    -z "${AWS_ZONE}" \
+    --flavor "${INSTANCE_FLAVOR}" \
+    --port 8080
+
+echo ""
+echo "Instance launched. Useful commands:"
+echo ""
+echo "  ops instance list -t aws -z ${AWS_ZONE}"
+echo "  ops instance logs <instance-name> -t aws -z ${AWS_ZONE}"
+echo "  ops instance delete <instance-name> -t aws -z ${AWS_ZONE}"

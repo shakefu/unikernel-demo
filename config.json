@@ -1,0 +1,9 @@
+{
+  "Env": {
+    "PORT": "8080"
+  },
+  "RunConfig": {
+    "Ports": ["8080"],
+    "Memory": "512M"
+  }
+}

@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
+
+# Ensure ops is on PATH
+export PATH="${HOME}/.ops/bin:${PATH}"
+
+BINARY="${PROJECT_DIR}/dist/server"
+IMAGE_NAME="${IMAGE_NAME:-unikernel-demo}"
+AWS_ZONE="${AWS_ZONE:-us-east-1}"
+OPS_BUCKET="${OPS_BUCKET:-}"
+
+if [[ ! -f "${BINARY}" ]]; then
+    echo "Binary not found at ${BINARY}. Run script/build first."
+    exit 1
+fi
+
+if [[ -z "${OPS_BUCKET}" ]]; then
+    echo "Error: OPS_BUCKET is not set."
+    echo ""
+    echo "ops requires an S3 bucket name for AWS image creation."
+    echo "The bucket must exist in the same region as AWS_ZONE."
+    echo ""
+    echo "Usage:"
+    echo "  OPS_BUCKET=my-bucket script/image"
+    echo "  OPS_BUCKET=my-bucket AWS_ZONE=us-west-2 script/image"
+    exit 1
+fi
+
+# Build a cloud config that merges with the base config.json
+CLOUD_CONFIG=$(mktemp)
+trap 'rm -f "${CLOUD_CONFIG}"' EXIT
+
+python3 -c "
+import json, sys
+with open('${PROJECT_DIR}/config.json') as f:
+    cfg = json.load(f)
+cfg['CloudConfig'] = {
+    'BucketName': '${OPS_BUCKET}',
+    'Zone': '${AWS_ZONE}'
+}
+json.dump(cfg, sys.stdout, indent=2)
+" > "${CLOUD_CONFIG}"
+
+ARCH_FLAG=""
+if [[ "$(uname -m)" != "x86_64" ]]; then
+    ARCH_FLAG="--arch=amd64"
+fi
+
+echo "Creating AWS AMI: ${IMAGE_NAME}..."
+echo "  Region: ${AWS_ZONE}"
+echo "  Bucket: ${OPS_BUCKET}"
+echo ""
+
+# shellcheck disable=SC2086
+ops image create ${ARCH_FLAG} "${BINARY}" \
+    -c "${CLOUD_CONFIG}" \
+    -i "${IMAGE_NAME}" \
+    -t aws
+
+echo ""
+echo "AMI created: ${IMAGE_NAME}"
+echo "List images with: ops image list -t aws -z ${AWS_ZONE}"
+echo "Deploy with:      OPS_BUCKET=${OPS_BUCKET} script/deploy"

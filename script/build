@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+VERSION="${VERSION:-$(git describe --tags 2>/dev/null || echo "0.0.0")}"
+GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")}"
+BUILD_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+LDFLAGS="-X main.Version=${VERSION} -X main.GitCommit=${GIT_COMMIT} -X main.BuildTime=${BUILD_TIME}"
+
+echo "Building dist/server..."
+echo "  Version:   ${VERSION}"
+echo "  Commit:    ${GIT_COMMIT}"
+echo "  BuildTime: ${BUILD_TIME}"
+
+mkdir -p dist
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "${LDFLAGS}" -o dist/server .
+
+echo "Built dist/server"
+file dist/server

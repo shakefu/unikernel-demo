@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
+
+# Ensure ops is on PATH
+export PATH="${HOME}/.ops/bin:${PATH}"
+
+BINARY="${PROJECT_DIR}/dist/server"
+
+if [[ ! -f "${BINARY}" ]]; then
+    echo "Binary not found at ${BINARY}. Run script/build first."
+    exit 1
+fi
+
+ARCH_FLAG=""
+if [[ "$(uname -m)" != "x86_64" ]]; then
+    ARCH_FLAG="--arch=amd64"
+fi
+
+echo "Running unikernel locally on port 8080..."
+# shellcheck disable=SC2086
+ops run ${ARCH_FLAG} -p 8080 -c "${PROJECT_DIR}/config.json" "${BINARY}"
